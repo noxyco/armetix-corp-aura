@@ -1,0 +1,1 @@
+An ERP designed to serve SMEs, it allows you to record purchases, sales, expenses, payments and much more, and generate invoices, monthly reports to allow managers and owners to make informed decisions about their businesses.
