@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import API from "../api/axiosInstance";
 import {
@@ -7,8 +7,6 @@ import {
   Plus,
   Search,
   Download,
-  Trash2,
-  ShieldCheck,
   DollarSign,
   X,
   CheckCircle,
@@ -25,10 +23,8 @@ const Sales = () => {
     amount: "",
     method: "Espèces",
     note: "",
+    date: new Date().toISOString().split("T")[0],
   });
-
-  const user = JSON.parse(localStorage.getItem("user"));
-  const isAdmin = user?.role === "admin";
 
   const fetchSales = async () => {
     try {
@@ -51,10 +47,16 @@ const Sales = () => {
         amount: Number(paymentData.amount),
         method: paymentData.method,
         note: paymentData.note,
+        date: paymentData.date,
       });
       alert(`Encaissement ${res.data.paymentNumber} enregistré !`);
       setSelectedInvoice(null);
-      setPaymentData({ amount: "", method: "Espèces", note: "" });
+      setPaymentData({
+        amount: "",
+        method: "Espèces",
+        note: "",
+        date: new Date().toISOString().split("T")[0],
+      });
       fetchSales();
     } catch (err) {
       alert(err.response?.data?.error || "Erreur lors de l'encaissement");
@@ -86,7 +88,7 @@ const Sales = () => {
               <input
                 type="text"
                 placeholder="Rechercher..."
-                className="pl-10 pr-4 py-2 border-none rounded-xl bg-white shadow-sm w-64"
+                className="pl-10 pr-4 py-2 border-none rounded-xl bg-white shadow-sm w-64 outline-none focus:ring-2 focus:ring-blue-500"
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
@@ -106,10 +108,16 @@ const Sales = () => {
             <thead className="bg-slate-50 border-b border-gray-100">
               <tr>
                 <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  Date
+                </th>
+                <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                   N° Facture
                 </th>
                 <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                   Client
+                </th>
+                <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">
+                  Montant TTC
                 </th>
                 <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">
                   Reste à Payer
@@ -128,11 +136,17 @@ const Sales = () => {
                   key={inv._id}
                   className="hover:bg-blue-50/30 transition-colors"
                 >
-                  <td className="p-5 font-mono text-xs font-bold text-slate-500">
-                    {inv.invoiceNumber}
+                  <td className="p-5 text-xs font-bold text-slate-400">
+                    {new Date(inv.date).toLocaleDateString("fr-FR")}
                   </td>
-                  <td className="p-5 text-sm text-slate-700 font-bold">
-                    {inv.partner?.name}
+                  <td className="p-5 font-mono text-xs font-bold text-blue-600 hover:underline">
+                    <Link to={`/invoices/${inv._id}`}>{inv.invoiceNumber}</Link>
+                  </td>
+                  <td className="p-5 text-sm text-slate-700 font-bold hover:text-blue-600 transition-colors">
+                    <Link to={`/invoices/${inv._id}`}>{inv.partner?.name}</Link>
+                  </td>
+                  <td className="p-5 text-right font-bold text-slate-900">
+                    {(inv.totalTTC || 0).toLocaleString()} DH
                   </td>
                   <td className="p-5 text-right font-black text-blue-600">
                     {(inv.amountRemaining ?? inv.totalTTC).toLocaleString()} DH
@@ -177,7 +191,7 @@ const Sales = () => {
           </table>
         </div>
 
-        {/* --- MODAL --- */}
+        {/* Modal Logic Remains Unchanged for functionality */}
         {selectedInvoice && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-[3rem] p-10 w-full max-w-md shadow-2xl relative">
@@ -192,10 +206,10 @@ const Sales = () => {
                   <Hash size={20} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-slate-800 uppercase leading-none">
+                  <h3 className="text-xl font-black text-slate-800 uppercase">
                     Encaissement
                   </h3>
-                  <p className="text-gray-400 text-xs font-bold mt-1">
+                  <p className="text-gray-400 text-xs font-bold">
                     Facture: {selectedInvoice.invoiceNumber}
                   </p>
                 </div>
@@ -203,7 +217,7 @@ const Sales = () => {
               <form onSubmit={handlePayment} className="space-y-5">
                 <div className="bg-blue-50 p-5 rounded-[2rem] border border-blue-100 flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-black text-blue-400 uppercase">
+                    <p className="text-[10px] font-black text-blue-400 uppercase text-left">
                       A recevoir
                     </p>
                     <p className="text-2xl font-black text-blue-900">
@@ -217,12 +231,20 @@ const Sales = () => {
                   <AlertCircle className="text-blue-300" size={32} />
                 </div>
                 <input
+                  type="date"
+                  className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold text-slate-700 text-center"
+                  value={paymentData.date}
+                  onChange={(e) =>
+                    setPaymentData({ ...paymentData, date: e.target.value })
+                  }
+                  required
+                />
+                <input
                   type="number"
                   max={
                     selectedInvoice.amountRemaining ?? selectedInvoice.totalTTC
                   }
-                  step="0.01"
-                  className="w-full p-5 bg-gray-50 rounded-2xl border-none font-black text-2xl text-slate-800"
+                  className="w-full p-5 bg-gray-50 rounded-2xl border-none font-black text-2xl text-slate-800 text-center"
                   value={paymentData.amount}
                   onChange={(e) =>
                     setPaymentData({ ...paymentData, amount: e.target.value })
@@ -244,7 +266,7 @@ const Sales = () => {
                   </select>
                   <input
                     type="text"
-                    placeholder="Note/Réf..."
+                    placeholder="Note..."
                     className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold text-slate-700"
                     value={paymentData.note}
                     onChange={(e) =>
@@ -254,9 +276,9 @@ const Sales = () => {
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-slate-900 text-white p-6 rounded-[2rem] font-black uppercase tracking-[0.2em] text-xs hover:bg-blue-600 transition-all flex items-center justify-center gap-3 shadow-xl"
+                  className="w-full bg-slate-900 text-white p-6 rounded-[2rem] font-black uppercase text-xs hover:bg-blue-600 transition-all flex items-center justify-center gap-3 shadow-xl"
                 >
-                  <CheckCircle size={20} /> Valider l'encaissement
+                  <CheckCircle size={20} /> Valider
                 </button>
               </form>
             </div>

@@ -2,16 +2,19 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import API from "../api/axiosInstance";
-import { Plus, Trash2, Save, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, Calendar } from "lucide-react";
 
 const CreateInvoice = () => {
   const navigate = useNavigate();
-  const { state } = useLocation(); // Gets { type: 'SALE' } or { type: 'PURCHASE' }
+  const { state } = useLocation();
   const type = state?.type || "SALE";
 
   const [partners, setPartners] = useState([]);
   const [products, setProducts] = useState([]);
   const [selectedPartner, setSelectedPartner] = useState("");
+  const [invoiceDate, setInvoiceDate] = useState(
+    new Date().toISOString().split("T")[0],
+  ); // Default Date
   const [items, setItems] = useState([
     { product: "", quantity: 1, priceHT: 0, tvaRate: 20 },
   ]);
@@ -66,7 +69,7 @@ const CreateInvoice = () => {
       items,
       ...totals,
       type,
-      date: new Date(),
+      date: invoiceDate, // Sending the manual selected date
     };
     try {
       await API.post("/invoices", invoiceData);
@@ -82,12 +85,27 @@ const CreateInvoice = () => {
     <div className="flex bg-gray-50 min-h-screen">
       <Sidebar />
       <div className="ml-64 p-8 w-full">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center text-gray-500 mb-4 hover:text-black"
-        >
-          <ArrowLeft size={18} className="mr-2" /> Retour
-        </button>
+        <div className="flex justify-between items-center mb-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center text-gray-500 hover:text-black"
+          >
+            <ArrowLeft size={18} className="mr-2" /> Retour
+          </button>
+
+          <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-100">
+            <Calendar size={18} className="text-gray-400" />
+            <span className="text-[10px] font-black uppercase text-gray-400">
+              Date:
+            </span>
+            <input
+              type="date"
+              className="border-none bg-transparent font-black text-slate-800 focus:ring-0"
+              value={invoiceDate}
+              onChange={(e) => setInvoiceDate(e.target.value)}
+            />
+          </div>
+        </div>
 
         <form
           onSubmit={handleSubmit}
@@ -102,7 +120,7 @@ const CreateInvoice = () => {
               {type === "SALE" ? "Client" : "Fournisseur"}
             </label>
             <select
-              className="w-full p-3 border rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 border rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
               value={selectedPartner}
               onChange={(e) => setSelectedPartner(e.target.value)}
               required
@@ -116,6 +134,7 @@ const CreateInvoice = () => {
             </select>
           </div>
 
+          {/* ... Items Logic remains the same ... */}
           <div className="space-y-4 mb-8">
             <label className="block text-xs font-bold text-gray-400 uppercase">
               Articles
@@ -130,7 +149,7 @@ const CreateInvoice = () => {
                     Produit
                   </p>
                   <select
-                    className="w-full p-2 border rounded-lg bg-white"
+                    className="w-full p-2 border rounded-lg bg-white font-medium"
                     value={item.product}
                     onChange={(e) =>
                       handleItemChange(index, "product", e.target.value)
@@ -151,7 +170,7 @@ const CreateInvoice = () => {
                   </p>
                   <input
                     type="number"
-                    className="w-full p-2 border rounded-lg"
+                    className="w-full p-2 border rounded-lg font-bold"
                     value={item.quantity}
                     onChange={(e) =>
                       handleItemChange(index, "quantity", e.target.value)
@@ -166,7 +185,7 @@ const CreateInvoice = () => {
                   </p>
                   <input
                     type="number"
-                    className="w-full p-2 border rounded-lg"
+                    className="w-full p-2 border rounded-lg font-bold"
                     value={item.priceHT}
                     onChange={(e) =>
                       handleItemChange(index, "priceHT", e.target.value)
@@ -186,7 +205,7 @@ const CreateInvoice = () => {
             <button
               type="button"
               onClick={addItem}
-              className="flex items-center text-blue-600 font-bold text-sm mt-2 hover:underline"
+              className="flex items-center text-blue-600 font-black text-[10px] uppercase tracking-widest mt-2 hover:underline"
             >
               <Plus size={18} className="mr-1" /> Ajouter une ligne
             </button>
@@ -194,19 +213,19 @@ const CreateInvoice = () => {
 
           <div className="border-t pt-6 flex justify-between items-center">
             <div className="text-right ml-auto mr-8">
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-400 text-[10px] font-black uppercase">
                 Total HT: {totals.totalHT.toFixed(2)} DH
               </p>
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-400 text-[10px] font-black uppercase">
                 TVA (20%): {totals.totalTVA.toFixed(2)} DH
               </p>
-              <p className="text-xl font-black text-slate-900">
-                NET À PAYER: {totals.totalTTC.toFixed(2)} DH
+              <p className="text-xl font-black text-slate-900 uppercase">
+                Net à Payer: {totals.totalTTC.toFixed(2)} DH
               </p>
             </div>
             <button
               type="submit"
-              className="bg-slate-900 text-white px-8 py-3 rounded-2xl font-bold flex items-center hover:bg-blue-600 transition-all shadow-lg"
+              className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center hover:bg-blue-600 transition-all shadow-lg"
             >
               <Save size={18} className="mr-2" /> Valider la Facture
             </button>

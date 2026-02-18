@@ -11,24 +11,35 @@ const isAdmin = (req, res, next) => {
 };
 
 // 1. MONTHLY REPORT
+// 1. MONTHLY REPORT
 router.get("/report/:month/:year", async (req, res) => {
   try {
     const { month, year } = req.params;
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0, 23, 59, 59);
 
-    const [invoices, expensesData] = await Promise.all([
+    const [invoices, expensesData, allProducts] = await Promise.all([
       Invoice.find({ date: { $gte: startDate, $lte: endDate } }),
       Expense.find({ date: { $gte: startDate, $lte: endDate } }),
+      Product.find({}), // Fetch all products for stock valuation
     ]);
 
-    const salesTotal = invoices
-      .filter((i) => i.type === "SALE")
-      .reduce((a, b) => a + (b.totalTTC || 0), 0);
-    const purchaseTotal = invoices
-      .filter((i) => i.type === "PURCHASE")
-      .reduce((a, b) => a + (b.totalTTC || 0), 0);
+    // Financial Calculations
+    const salesInvoices = invoices.filter((i) => i.type === "SALE");
+    const purchaseInvoices = invoices.filter((i) => i.type === "PURCHASE");
+
+    const salesTotal = salesInvoices.reduce((a, b) => a + (b.totalTTC || 0), 0);
+    const purchaseTotal = purchaseInvoices.reduce(
+      (a, b) => a + (b.totalTTC || 0),
+      0,
+    );
     const expenseTotal = expensesData.reduce((a, b) => a + (b.amount || 0), 0);
+
+    // Stock Valuation (Quantity * Unit Price HT)
+    const totalStockValue = allProducts.reduce(
+      (a, b) => a + b.stockQuantity * b.priceHT,
+      0,
+    );
 
     const reportData = {
       month,
@@ -36,22 +47,24 @@ router.get("/report/:month/:year", async (req, res) => {
       sales: salesTotal,
       purchases: purchaseTotal,
       expenses: expenseTotal,
-      salesTVA: invoices
-        .filter((i) => i.type === "SALE")
-        .reduce((a, b) => a + (b.totalTVA || 0), 0),
-      purchasesTVA: invoices
-        .filter((i) => i.type === "PURCHASE")
-        .reduce((a, b) => a + (b.totalTVA || 0), 0),
+      salesTVA: salesInvoices.reduce((a, b) => a + (b.totalTVA || 0), 0),
+      purchasesTVA: purchaseInvoices.reduce((a, b) => a + (b.totalTVA || 0), 0),
       netProfit: salesTotal - purchaseTotal - expenseTotal,
+      stockValue: totalStockValue,
+      invoiceCount: invoices.length,
+      expenseCount: expensesData.length,
     };
 
     pdfService.generateMonthlyReport(reportData, (binary) => {
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename=Rapport.pdf`);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=Rapport_${month}_${year}.pdf`,
+      );
       res.send(binary);
     });
   } catch (err) {
-    res.status(500).json({ error: "Erreur rapport" });
+    res.status(500).json({ error: "Erreur lors de la génération du rapport" });
   }
 });
 
@@ -98,6 +111,23 @@ router.get("/pdf/:id", async (req, res) => {
     });
   } catch (err) {
     res.status(500).send(err.message);
+  }
+});
+
+// GET single invoice by ID
+router.get("/:id", async (req, res) => {
+  try {
+    // Populate partner AND the product details within the items array
+    const invoice = await Invoice.findById(req.params.id)
+      .populate("partner")
+      .populate("items.product");
+
+    if (!invoice) {
+      return res.status(404).json({ message: "Facture non trouvée" });
+    }
+    res.json(invoice);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
