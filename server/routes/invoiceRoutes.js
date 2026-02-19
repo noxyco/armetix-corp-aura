@@ -68,6 +68,68 @@ router.get("/report/:month/:year", async (req, res) => {
   }
 });
 
+router.get("/partner/:id/ledger", async (req, res) => {
+  try {
+    const partnerId = req.params.id;
+
+    // 1. Fetch the Partner first to ensure the header (ICE/Name) always works
+    // Use your Partner model (ensure it's imported at the top of the file)
+    const Partner = require("../models/Partner");
+    const partnerInfo = await Partner.findById(partnerId);
+
+    if (!partnerInfo) {
+      return res.status(404).json({ error: "Partenaire non trouvé" });
+    }
+
+    // 2. Fetch invoices and populate the partner field
+    const invoices = await Invoice.find({ partner: partnerId })
+      .sort({ date: 1 })
+      .populate("partner");
+
+    // 3. If no invoices, return the partner info with empty transactions
+    if (!invoices.length) {
+      return res.json({
+        partner: partnerInfo,
+        transactions: [],
+        totalSolde: 0,
+      });
+    }
+
+    // 4. Calculate the Ledger
+    let runningBalance = 0;
+    const transactions = invoices.map((inv) => {
+      const isSale = inv.type === "SALE";
+
+      // We use amountRemaining because it reflects the real debt
+      const impact = isSale
+        ? inv.amountRemaining || 0
+        : -(inv.amountRemaining || 0);
+      runningBalance += impact;
+
+      return {
+        _id: inv._id,
+        date: inv.date,
+        type: inv.type,
+        invoiceNumber: inv.invoiceNumber,
+        amount: inv.totalTTC,
+        amountPaid: inv.amountPaid || 0,
+        amountRemaining: inv.amountRemaining || 0,
+        status: inv.status,
+        currentSolde: runningBalance,
+      };
+    });
+
+    res.json({
+      partner: partnerInfo, // Use the direct fetch for stability
+      transactions: transactions.reverse(),
+      totalSolde: runningBalance,
+    });
+  } catch (err) {
+    console.error("Ledger Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 2. GET ALL
 router.get("/", async (req, res) => {
   try {

@@ -11,6 +11,7 @@ import CreateInvoice from "./pages/CreateInvoice";
 import Users from "./pages/Users";
 import Payments from "./pages/Payments";
 import InvoiceDetail from "./pages/InvoiceDetail";
+import PartnerDetail from "./pages/PartnerDetail";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path="/users" element={<Users />} />
         <Route path="/payments" element={<Payments />} />
         <Route path="/invoices/:id" element={<InvoiceDetail />} />
+        <Route path="/partners/:id" element={<PartnerDetail />} />
       </Routes>
     </Router>
   );
