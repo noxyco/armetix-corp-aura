@@ -12,6 +12,8 @@ import {
   CheckCircle,
   AlertCircle,
   Hash,
+  TrendingUp,
+  BarChart3,
 } from "lucide-react";
 
 const Sales = () => {
@@ -49,7 +51,6 @@ const Sales = () => {
         note: paymentData.note,
         date: paymentData.date,
       });
-      alert(`Encaissement ${res.data.paymentNumber} enregistré !`);
       setSelectedInvoice(null);
       setPaymentData({
         amount: "",
@@ -59,7 +60,7 @@ const Sales = () => {
       });
       fetchSales();
     } catch (err) {
-      alert(err.response?.data?.error || "Erreur lors de l'encaissement");
+      alert(err.response?.data?.error || "Erreur");
     }
   };
 
@@ -69,26 +70,36 @@ const Sales = () => {
       s.partner?.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
+  const totalReceivable = filtered.reduce(
+    (acc, curr) => acc + (curr.amountRemaining ?? curr.totalTTC),
+    0,
+  );
+
   return (
     <div className="flex bg-gray-50 min-h-screen">
       <Sidebar />
       <div className="ml-64 p-8 w-full">
-        <div className="flex justify-between items-center mb-8">
+        {/* HEADER */}
+        <div className="flex justify-between items-end mb-10">
           <div>
-            <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight flex items-center">
-              <ShoppingCart className="mr-3 text-blue-600" size={28} /> Ventes
+            <h1 className="text-3xl font-black text-slate-800 uppercase tracking-tighter italic">
+              Ventes
             </h1>
-            <p className="text-gray-400 text-xs font-medium mt-1">
-              Gestion des créances et encaissements clients
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1 flex items-center">
+              <TrendingUp size={14} className="mr-2 text-blue-600" /> Chiffre
+              d'Affaire & Créances Clients
             </p>
           </div>
           <div className="flex gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
+            <div className="relative group">
+              <Search
+                className="absolute left-4 top-3 text-slate-300 group-focus-within:text-blue-600 transition-colors"
+                size={18}
+              />
               <input
                 type="text"
-                placeholder="Rechercher..."
-                className="pl-10 pr-4 py-2 border-none rounded-xl bg-white shadow-sm w-64 outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Rechercher une facture..."
+                className="pl-12 pr-6 py-3 border-none rounded-2xl bg-white shadow-sm w-80 font-bold text-slate-600 focus:ring-2 focus:ring-blue-500/20 transition-all"
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
@@ -96,64 +107,95 @@ const Sales = () => {
               onClick={() =>
                 navigate("/create-invoice", { state: { type: "SALE" } })
               }
-              className="bg-blue-600 text-white px-5 py-2.5 rounded-xl flex items-center hover:bg-blue-700 transition font-bold shadow-lg shadow-blue-100"
+              className="bg-blue-600 text-white px-6 py-3 rounded-2xl flex items-center hover:bg-slate-900 transition-all font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-blue-100"
             >
-              <Plus className="mr-2 w-4 h-4" /> Nouvelle Vente
+              <Plus className="mr-2" size={18} /> Nouvelle Vente
             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
+        {/* SUMMARY RIBBON */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+              Total à Encaisser
+            </p>
+            <p className="text-3xl font-black text-blue-600 italic">
+              {totalReceivable.toLocaleString()}{" "}
+              <span className="text-sm font-medium">DH</span>
+            </p>
+          </div>
+          <div className="bg-blue-900 p-6 rounded-[2rem] shadow-xl flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">
+                Total Facturé
+              </p>
+              <p className="text-3xl font-black text-white italic">
+                {filtered
+                  .reduce((a, b) => a + (b.totalTTC || 0), 0)
+                  .toLocaleString()}{" "}
+                <span className="text-sm font-normal">DH</span>
+              </p>
+            </div>
+            <BarChart3 className="text-white opacity-20" size={40} />
+          </div>
+        </div>
+
+        {/* TABLE */}
+        <div className="bg-white rounded-[3rem] shadow-sm border border-slate-100 overflow-hidden">
           <table className="w-full text-left">
-            <thead className="bg-slate-50 border-b border-gray-100">
-              <tr>
-                <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                  Date
+            <thead>
+              <tr className="bg-slate-50/50 border-b border-slate-50">
+                <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Date / N°
                 </th>
-                <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                  N° Facture
-                </th>
-                <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   Client
                 </th>
-                <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">
-                  Montant TTC
+                <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
+                  Total TTC
                 </th>
-                <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">
-                  Reste à Payer
+                <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
+                  Reste
                 </th>
-                <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">
+                <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
                   Statut
                 </th>
-                <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">
+                <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-slate-50">
               {filtered.map((inv) => (
                 <tr
                   key={inv._id}
-                  className="hover:bg-blue-50/30 transition-colors"
+                  className="hover:bg-blue-50/30 transition-all group"
                 >
-                  <td className="p-5 text-xs font-bold text-slate-400">
-                    {new Date(inv.date).toLocaleDateString("fr-FR")}
+                  <td className="p-6">
+                    <div className="text-xs font-black text-slate-800 italic">
+                      {new Date(inv.date).toLocaleDateString("fr-FR")}
+                    </div>
+                    <Link
+                      to={`/invoices/${inv._id}`}
+                      className="text-[10px] font-bold text-blue-600 uppercase hover:underline"
+                    >
+                      {inv.invoiceNumber}
+                    </Link>
                   </td>
-                  <td className="p-5 font-mono text-xs font-bold text-blue-600 hover:underline">
-                    <Link to={`/invoices/${inv._id}`}>{inv.invoiceNumber}</Link>
+                  <td className="p-6 text-sm font-black text-slate-700">
+                    {inv.partner?.name}
                   </td>
-                  <td className="p-5 text-sm text-slate-700 font-bold hover:text-blue-600 transition-colors">
-                    <Link to={`/invoices/${inv._id}`}>{inv.partner?.name}</Link>
+                  <td className="p-6 text-right font-bold text-slate-900">
+                    {(inv.totalTTC || 0).toLocaleString()}{" "}
+                    <span className="text-[10px]">DH</span>
                   </td>
-                  <td className="p-5 text-right font-bold text-slate-900">
-                    {(inv.totalTTC || 0).toLocaleString()} DH
-                  </td>
-                  <td className="p-5 text-right font-black text-blue-600">
+                  <td className="p-6 text-right font-black text-blue-600 italic">
                     {(inv.amountRemaining ?? inv.totalTTC).toLocaleString()} DH
                   </td>
-                  <td className="p-5 text-center">
+                  <td className="p-6 text-center">
                     <span
-                      className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                      className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${
                         inv.status === "Payée"
                           ? "bg-green-100 text-green-700"
                           : inv.status === "Partielle"
@@ -164,26 +206,28 @@ const Sales = () => {
                       {inv.status || "Non Payée"}
                     </span>
                   </td>
-                  <td className="p-5 flex justify-center gap-2">
-                    {inv.status !== "Payée" && (
+                  <td className="p-6">
+                    <div className="flex justify-center gap-3">
+                      {inv.status !== "Payée" && (
+                        <button
+                          onClick={() => setSelectedInvoice(inv)}
+                          className="p-3 bg-blue-600 text-white rounded-2xl hover:bg-slate-900 transition-all shadow-lg shadow-blue-100"
+                        >
+                          <DollarSign size={16} />
+                        </button>
+                      )}
                       <button
-                        onClick={() => setSelectedInvoice(inv)}
-                        className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all"
+                        onClick={() =>
+                          window.open(
+                            `http://localhost:5000/api/invoices/pdf/${inv._id}`,
+                            "_blank",
+                          )
+                        }
+                        className="p-3 bg-white border border-slate-100 text-slate-400 hover:text-slate-900 rounded-2xl transition-all shadow-sm"
                       >
-                        <DollarSign size={18} />
+                        <Download size={16} />
                       </button>
-                    )}
-                    <button
-                      onClick={() =>
-                        window.open(
-                          `http://localhost:5000/api/invoices/pdf/${inv._id}`,
-                          "_blank",
-                        )
-                      }
-                      className="p-2 text-gray-300 hover:text-slate-900 transition-colors"
-                    >
-                      <Download size={18} />
-                    </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -191,94 +235,100 @@ const Sales = () => {
           </table>
         </div>
 
-        {/* Modal Logic Remains Unchanged for functionality */}
+        {/* MODAL - BLUE THEME */}
         {selectedInvoice && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-[3rem] p-10 w-full max-w-md shadow-2xl relative">
+          <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-[3.5rem] p-12 w-full max-w-md shadow-2xl relative border border-white/20">
               <button
                 onClick={() => setSelectedInvoice(null)}
-                className="absolute top-8 right-8 text-gray-300 hover:text-slate-900"
+                className="absolute top-10 right-10 text-slate-300 hover:text-slate-900 transition-colors"
               >
-                <X size={24} />
+                <X size={28} />
               </button>
-              <div className="flex items-center gap-3 mb-8">
-                <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl">
-                  <Hash size={20} />
+
+              <div className="mb-10 text-center">
+                <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto mb-4">
+                  <DollarSign size={32} />
                 </div>
-                <div>
-                  <h3 className="text-xl font-black text-slate-800 uppercase">
-                    Encaissement
-                  </h3>
-                  <p className="text-gray-400 text-xs font-bold">
-                    Facture: {selectedInvoice.invoiceNumber}
+                <h3 className="text-2xl font-black text-slate-800 uppercase italic">
+                  Encaissement
+                </h3>
+                <p className="text-slate-400 text-[10px] font-black tracking-widest uppercase italic">
+                  {selectedInvoice.invoiceNumber}
+                </p>
+              </div>
+
+              <form onSubmit={handlePayment} className="space-y-6">
+                <div className="bg-blue-50/50 p-6 rounded-[2.5rem] text-center border border-blue-100">
+                  <p className="text-[10px] font-black text-blue-400 uppercase mb-1 italic">
+                    Somme attendue
+                  </p>
+                  <p className="text-3xl font-black text-blue-900 italic">
+                    {(
+                      selectedInvoice.amountRemaining ??
+                      selectedInvoice.totalTTC
+                    ).toLocaleString()}{" "}
+                    DH
                   </p>
                 </div>
-              </div>
-              <form onSubmit={handlePayment} className="space-y-5">
-                <div className="bg-blue-50 p-5 rounded-[2rem] border border-blue-100 flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] font-black text-blue-400 uppercase text-left">
-                      A recevoir
-                    </p>
-                    <p className="text-2xl font-black text-blue-900">
-                      {(
-                        selectedInvoice.amountRemaining ??
-                        selectedInvoice.totalTTC
-                      ).toLocaleString()}{" "}
-                      DH
-                    </p>
-                  </div>
-                  <AlertCircle className="text-blue-300" size={32} />
-                </div>
-                <input
-                  type="date"
-                  className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold text-slate-700 text-center"
-                  value={paymentData.date}
-                  onChange={(e) =>
-                    setPaymentData({ ...paymentData, date: e.target.value })
-                  }
-                  required
-                />
-                <input
-                  type="number"
-                  max={
-                    selectedInvoice.amountRemaining ?? selectedInvoice.totalTTC
-                  }
-                  className="w-full p-5 bg-gray-50 rounded-2xl border-none font-black text-2xl text-slate-800 text-center"
-                  value={paymentData.amount}
-                  onChange={(e) =>
-                    setPaymentData({ ...paymentData, amount: e.target.value })
-                  }
-                  placeholder="0.00"
-                  required
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <select
-                    className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold text-slate-700"
-                    value={paymentData.method}
-                    onChange={(e) =>
-                      setPaymentData({ ...paymentData, method: e.target.value })
-                    }
-                  >
-                    <option value="Espèces">Espèces</option>
-                    <option value="Virement">Virement</option>
-                    <option value="Chèque">Chèque</option>
-                  </select>
+
+                <div className="space-y-4">
                   <input
-                    type="text"
-                    placeholder="Note..."
-                    className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold text-slate-700"
-                    value={paymentData.note}
+                    type="date"
+                    className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-slate-700 text-center focus:ring-2 focus:ring-blue-500/20"
+                    value={paymentData.date}
                     onChange={(e) =>
-                      setPaymentData({ ...paymentData, note: e.target.value })
+                      setPaymentData({ ...paymentData, date: e.target.value })
                     }
+                    required
                   />
+                  <input
+                    type="number"
+                    max={
+                      selectedInvoice.amountRemaining ??
+                      selectedInvoice.totalTTC
+                    }
+                    className="w-full p-6 bg-slate-50 rounded-[2rem] border-none font-black text-3xl text-slate-800 text-center focus:ring-2 focus:ring-blue-500/20"
+                    value={paymentData.amount}
+                    onChange={(e) =>
+                      setPaymentData({ ...paymentData, amount: e.target.value })
+                    }
+                    placeholder="0.00"
+                    required
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <select
+                      className="w-full p-4 bg-slate-50 rounded-2xl border-none font-black text-[10px] uppercase text-slate-700"
+                      value={paymentData.method}
+                      onChange={(e) =>
+                        setPaymentData({
+                          ...paymentData,
+                          method: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="Espèces">Espèces</option>
+                      <option value="Virement">Virement</option>
+                      <option value="Chèque">Chèque</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Note..."
+                      className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-xs text-slate-700"
+                      value={paymentData.note}
+                      onChange={(e) =>
+                        setPaymentData({ ...paymentData, note: e.target.value })
+                      }
+                    />
+                  </div>
                 </div>
+
                 <button
                   type="submit"
-                  className="w-full bg-slate-900 text-white p-6 rounded-[2rem] font-black uppercase text-xs hover:bg-blue-600 transition-all flex items-center justify-center gap-3 shadow-xl"
+                  className="w-full bg-blue-600 text-white p-6 rounded-[2.5rem] font-black uppercase text-xs hover:bg-slate-900 transition-all flex items-center justify-center gap-3 shadow-2xl shadow-blue-200"
                 >
-                  <CheckCircle size={20} /> Valider
+                  <CheckCircle size={20} /> Valider l'encaissement
                 </button>
               </form>
             </div>
