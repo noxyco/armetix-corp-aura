@@ -11,6 +11,7 @@ const ExpenseSchema = new mongoose.Schema(
         "Transport",
         "Salaire",
         "Marketing",
+        "Divers",
         "Autre",
       ],
       default: "Autre",

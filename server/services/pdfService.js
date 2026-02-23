@@ -107,127 +107,208 @@ exports.generateMonthlyReport = (data, callback) => {
     netProfit,
     salesTVA,
     purchasesTVA,
-    stockValue, // New data
-    invoiceCount, // New data
-    expenseCount, // New data
+    stockValue,
+    invoiceCount,
+    expenseCount,
   } = data;
 
-  const doc = new PDFDocument({ margin: 50, size: "A4" });
+  const doc = new PDFDocument({ margin: 40, size: "A4" });
   let chunks = [];
   doc.on("data", (chunk) => chunks.push(chunk));
   doc.on("end", () => callback(Buffer.concat(chunks)));
 
-  // 1. Header with Dark Theme
-  doc.rect(0, 0, 612, 120).fill("#1e293b");
+  // --- 1. HEADER (SLATE THEME) ---
+  doc.rect(0, 0, 612, 120).fill("#0f172a");
+
+  doc
+    .fillColor("#38bdf8")
+    .fontSize(9)
+    .font("Helvetica-Bold")
+    .text("SYSTÈME DE GESTION INTERNE", 40, 35, { characterSpacing: 1 });
+
   doc
     .fillColor("white")
-    .fontSize(24)
+    .fontSize(22)
     .font("Helvetica-Bold")
-    .text("RAPPORT FINANCIER", 50, 40);
-  doc
-    .fontSize(12)
-    .font("Helvetica")
-    .text(`Période: ${month}/${year} | État de l'activité commerciale`, 50, 75);
+    .text("RAPPORT MENSUEL", 40, 50);
 
-  // 2. Metric Boxes (KPIs)
-  const drawMetric = (label, value, x, y, color = "#1e293b") => {
-    doc.rect(x, y, 160, 70).strokeColor("#e2e8f0").stroke();
+  doc
+    .fillColor("#94a3b8")
+    .fontSize(11)
+    .font("Helvetica")
+    .text(`Période: ${month.toString().padStart(2, "0")} / ${year}`, 40, 78);
+
+  // Status Badge (Top Right)
+  const statusLabel = netProfit >= 0 ? "BÉNÉFICIAIRE" : "DÉFICITAIRE";
+  const statusColor = netProfit >= 0 ? "#10b981" : "#ef4444";
+  doc.roundedRect(430, 50, 120, 22, 4).fill(statusColor);
+  doc
+    .fillColor("white")
+    .fontSize(8)
+    .font("Helvetica-Bold")
+    .text(statusLabel, 430, 57, { align: "center", width: 120 });
+
+  // --- 2. KPI CARDS ---
+  const drawMetricCard = (label, value, x, y, accentColor) => {
+    doc.roundedRect(x, y, 160, 75, 10).fill("#ffffff");
+    doc
+      .roundedRect(x, y, 160, 75, 10)
+      .strokeColor("#f1f5f9")
+      .lineWidth(1)
+      .stroke();
+    doc
+      .path(`M ${x + 12} ${y + 20} L ${x + 30} ${y + 20}`)
+      .strokeColor(accentColor)
+      .lineWidth(2.5)
+      .stroke();
+
     doc
       .fillColor("#64748b")
       .fontSize(8)
       .font("Helvetica-Bold")
-      .text(label.toUpperCase(), x + 10, y + 15);
+      .text(label.toUpperCase(), x + 12, y + 30);
+
     doc
-      .fillColor(color)
+      .fillColor("#1e293b")
       .fontSize(14)
-      .text(`${Number(value).toLocaleString()} DH`, x + 10, y + 35);
+      .font("Helvetica-Bold")
+      .text(`${Number(value).toLocaleString()} DH`, x + 12, y + 48);
   };
 
-  let currentY = 150;
-  drawMetric("Ventes (TTC)", sales, 50, currentY, "#2563eb");
-  drawMetric("Achats (TTC)", purchases, 220, currentY, "#64748b");
-  drawMetric("Frais (Généraux)", expenses, 390, currentY, "#e11d48");
+  let currentY = 140;
+  drawMetricCard("Chiffre d'Affaires", sales, 45, currentY, "#3b82f6");
+  drawMetricCard("Total Achats", purchases, 215, currentY, "#94a3b8");
+  drawMetricCard("Charges / Frais", expenses, 385, currentY, "#f43f5e");
 
-  // 3. Flow Summary Table
-  currentY += 100;
+  // --- 3. DYNAMC TABLE LOGIC ---
+  currentY += 105;
   doc
-    .fillColor("#1e293b")
-    .fontSize(14)
+    .fillColor("#0f172a")
+    .fontSize(12)
     .font("Helvetica-Bold")
-    .text("DÉTAILS DES OPÉRATIONS", 50, currentY);
-  currentY += 25;
+    .text("DÉTAILS DES FLUX & TAXES", 45, currentY);
 
-  const drawRow = (label, value, y, isBold = false, color = "#334155") => {
+  currentY += 20;
+  const drawListRow = (label, value, y, isTotal = false, suffix = " DH") => {
+    if (isTotal) {
+      doc.rect(40, y - 5, 532, 25).fill("#f8fafc");
+    }
+
     doc
-      .font(isBold ? "Helvetica-Bold" : "Helvetica")
-      .fontSize(10)
-      .fillColor(color);
-    doc.text(label, 50, y);
-    doc.text(`${Number(value).toLocaleString()} DH`, 400, y, {
-      align: "right",
-      width: 140,
-    });
-    doc
-      .moveTo(50, y + 15)
-      .lineTo(540, y + 15)
-      .strokeColor("#f1f5f9")
-      .stroke();
+      .fillColor(isTotal ? "#0f172a" : "#475569")
+      .fontSize(9)
+      .font(isTotal ? "Helvetica-Bold" : "Helvetica")
+      .text(label, 55, y + 4);
+
+    const formattedValue =
+      suffix === " DH"
+        ? `${Number(value).toLocaleString()} DH`
+        : Number(value).toLocaleString();
+
+    doc.text(formattedValue, 390, y + 4, { align: "right", width: 160 });
+
+    if (!isTotal) {
+      doc
+        .moveTo(45, y + 20)
+        .lineTo(560, y + 20)
+        .strokeColor("#f1f5f9")
+        .lineWidth(0.5)
+        .stroke();
+    }
   };
 
-  drawRow("Total TVA Collectée (Ventes)", salesTVA, currentY);
+  drawListRow("TVA Collectée (Ventes)", salesTVA, currentY);
   currentY += 25;
-  drawRow("Total TVA Déductible (Achats)", -purchasesTVA, currentY);
+  drawListRow("TVA Déductible (Achats/Charges)", -purchasesTVA, currentY);
   currentY += 25;
-  const netTVA = salesTVA - purchasesTVA;
-  drawRow(
-    "TVA NETTE À DÉCLARER",
-    netTVA,
+  drawListRow(
+    "SOLDE DE TVA À DÉCLARER",
+    salesTVA - purchasesTVA,
     currentY,
     true,
-    netTVA > 0 ? "#b45309" : "#15803d",
   );
 
-  // 4. Activity & Stock Section
+  // --- 4. INVENTORY & VOLUME ---
   currentY += 50;
   doc
-    .fillColor("#1e293b")
-    .fontSize(14)
+    .fillColor("#0f172a")
+    .fontSize(12)
     .font("Helvetica-Bold")
-    .text("INVENTAIRE ET STATISTIQUES", 50, currentY);
-  currentY += 25;
+    .text("INVENTAIRE & ACTIVITÉ", 45, currentY);
 
-  drawRow("Valeur Estimée du Stock (HT)", stockValue || 0, currentY);
+  currentY += 20;
+  drawListRow("Valeur de Stock Estimée (HT)", stockValue, currentY);
   currentY += 25;
-  drawRow("Volume de Factures Générées", invoiceCount || 0, currentY); // Shown as DH for row consistency, can be adjusted
+  drawListRow("Nombre de Factures Émises", invoiceCount, currentY, false, "");
   currentY += 25;
-  drawRow("Nombre de Notes de Frais", expenseCount || 0, currentY);
+  drawListRow(
+    "Nombre de Justificatifs Frais",
+    expenseCount,
+    currentY,
+    false,
+    "",
+  );
 
-  // 5. Final Result Banner
-  currentY += 50;
-  const profitColor = netProfit >= 0 ? "#16a34a" : "#dc2626";
-  doc.rect(50, currentY, 490, 60).fill(netProfit >= 0 ? "#f0fdf4" : "#fef2f2");
+  // --- 5. BOTTOM SUMMARY (BENTO BOX) ---
+  currentY += 55;
+  const finalColor = netProfit >= 0 ? "#059669" : "#dc2626";
+
+  doc.roundedRect(45, currentY, 515, 70, 12).fill("#f1f5f9");
+
   doc
-    .fillColor(profitColor)
-    .fontSize(16)
+    .fillColor("#475569")
+    .fontSize(9)
     .font("Helvetica-Bold")
-    .text("RÉSULTAT NET DU MOIS", 70, currentY + 22);
+    .text("RÉSULTAT NET COMPTABLE", 65, currentY + 20);
+
   doc
-    .fontSize(20)
-    .text(`${Number(netProfit).toLocaleString()} DH`, 350, currentY + 20, {
+    .fillColor(finalColor)
+    .fontSize(24)
+    .font("Helvetica-Bold")
+    .text(`${Number(netProfit).toLocaleString()} DH`, 240, currentY + 35, {
       align: "right",
-      width: 170,
+      width: 290,
     });
 
-  // Footer
+  // --- 6. OFFICIAL FOOTER ---
+  const footerY = 745;
+
+  doc
+    .moveTo(45, footerY - 10)
+    .lineTo(565, footerY - 10)
+    .strokeColor("#e2e8f0")
+    .lineWidth(0.5)
+    .stroke();
+
   doc
     .fontSize(8)
-    .fillColor("#94a3b8")
+    .fillColor("#1e293b")
+    .font("Helvetica-Bold")
+    .text("VOTRE NOM D'ENTREPRISE", 0, footerY, {
+      align: "center",
+      width: 612,
+    });
+
+  doc
+    .font("Helvetica")
+    .fillColor("#64748b")
+    .fontSize(7)
+    .text("123 Adresse de l'Entreprise, Casablanca, Maroc", 0, footerY + 12, {
+      align: "center",
+      width: 612,
+    })
     .text(
-      "Document confidentiel généré par le système de gestion interne.",
-      50,
-      780,
-      { align: "center", width: 500 },
-    );
+      "+212 5XX XX XX XX  |  contact@entreprise.ma  |  www.entreprise.ma",
+      0,
+      footerY + 22,
+      { align: "center", width: 612 },
+    )
+    .fillColor("#94a3b8")
+    .font("Helvetica-Bold")
+    .text("ICE: 001234567890012", 0, footerY + 35, {
+      align: "center",
+      width: 612,
+    });
 
   doc.end();
 };
