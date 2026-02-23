@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -8,7 +8,6 @@ import {
   Package,
   FileText,
   Calendar,
-  Layers,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import API from "../api/axiosInstance";
@@ -18,6 +17,7 @@ const InvoiceDetail = () => {
   const navigate = useNavigate();
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
+  const printRef = useRef(); // Reference to the invoice card
 
   useEffect(() => {
     const fetchInvoice = async () => {
@@ -49,9 +49,14 @@ const InvoiceDetail = () => {
 
   return (
     <div className="flex bg-gray-50 min-h-screen">
-      <Sidebar />
-      <div className="ml-64 p-8 w-full">
-        <div className="flex justify-between items-center mb-8">
+      {/* Sidebar hidden during print via CSS */}
+      <div className="print:hidden">
+        <Sidebar />
+      </div>
+
+      <div className="ml-0 md:ml-64 p-4 md:p-8 w-full print:m-0 print:p-0">
+        {/* ACTION BUTTONS - Hidden during print */}
+        <div className="flex justify-between items-center mb-8 print:hidden">
           <button
             onClick={() => navigate(-1)}
             className="flex items-center text-slate-400 hover:text-slate-900 font-black uppercase text-[10px] tracking-widest transition-all bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100"
@@ -61,17 +66,21 @@ const InvoiceDetail = () => {
 
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-2 bg-white text-slate-900 border border-gray-200 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all shadow-sm"
+            className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-900 transition-all shadow-lg"
           >
-            <Printer size={18} /> Imprimer
+            <Printer size={18} /> Imprimer la facture
           </button>
         </div>
 
+        {/* INVOICE CARD */}
         <div className="max-w-5xl mx-auto">
-          <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/50 border border-gray-100 overflow-hidden">
+          <div
+            ref={printRef}
+            className="bg-white rounded-[3rem] print:rounded-none shadow-2xl shadow-slate-200/50 border border-gray-100 overflow-hidden print:shadow-none print:border-none"
+          >
             {/* Top Banner */}
             <div
-              className={`p-12 text-white flex justify-between items-end ${isSale ? "bg-blue-600" : "bg-slate-900"}`}
+              className={`p-12 text-white flex justify-between items-end ${isSale ? "bg-blue-600" : "bg-slate-900"} print:bg-blue-600 print:!text-white print:[-webkit-print-color-adjust:exact]`}
             >
               <div>
                 <div className="flex items-center gap-3 mb-4">
@@ -106,7 +115,7 @@ const InvoiceDetail = () => {
             <div className="p-12">
               <div className="grid grid-cols-2 gap-8 mb-16">
                 {/* Emetteur */}
-                <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100">
+                <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100 print:bg-white">
                   <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center">
                     <Building2 size={14} className="mr-2" /> Émetteur
                   </h3>
@@ -177,7 +186,6 @@ const InvoiceDetail = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {invoice.items?.map((item, index) => {
-                      // FIX: Using designation and priceHT from your Product model
                       const productName =
                         item.product?.designation ||
                         item.productName ||
@@ -190,13 +198,13 @@ const InvoiceDetail = () => {
                       const rowTotal = qty * unitPrice;
 
                       return (
-                        <tr key={index} className="group">
+                        <tr key={index}>
                           <td className="py-6">
                             <div className="flex items-center gap-4">
-                              <div className="p-3 bg-slate-50 rounded-xl text-slate-400 group-hover:bg-slate-100 transition-colors">
+                              <div className="p-3 bg-slate-50 rounded-xl text-slate-400 print:hidden">
                                 <Package size={18} />
                               </div>
-                              <span className="font-black text-slate-700 uppercase text-sm tracking-tight">
+                              <span className="font-black text-slate-700 uppercase text-sm">
                                 {productName}
                               </span>
                             </div>
@@ -219,7 +227,7 @@ const InvoiceDetail = () => {
 
               {/* Financial Summary */}
               <div className="flex justify-end">
-                <div className="w-full max-w-sm bg-slate-50 rounded-[2.5rem] p-8 space-y-4">
+                <div className="w-full max-w-sm bg-slate-50 rounded-[2.5rem] p-8 space-y-4 print:bg-white print:border print:border-slate-100">
                   <div className="flex justify-between items-center text-slate-500">
                     <span className="text-[10px] font-black uppercase tracking-widest">
                       Total Hors Taxe
@@ -229,14 +237,9 @@ const InvoiceDetail = () => {
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-slate-500">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black uppercase tracking-widest">
-                        TVA
-                      </span>
-                      <span className="bg-slate-200 text-slate-600 text-[8px] font-black px-1.5 py-0.5 rounded">
-                        20%
-                      </span>
-                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest">
+                      TVA (20%)
+                    </span>
                     <span className="font-bold">
                       {(Number(invoice.totalTVA) || 0).toLocaleString()} DH
                     </span>
@@ -258,6 +261,29 @@ const InvoiceDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* INJECTED PRINT STYLES */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        @media print {
+          @page { size: auto; margin: 0mm; }
+          body { background: white !important; }
+          .ml-64 { margin-left: 0 !important; }
+          .print\\:hidden { display: none !important; }
+          .print\\:m-0 { margin: 0 !important; }
+          .print\\:p-0 { padding: 0 !important; }
+          .print\\:shadow-none { box-shadow: none !important; }
+          .print\\:rounded-none { border-radius: 0 !important; }
+          .print\\:bg-white { background-color: white !important; }
+          .print\\:!text-white { color: white !important; }
+          
+          /* Ensure the blue header colors actually print */
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+      `,
+        }}
+      />
     </div>
   );
 };

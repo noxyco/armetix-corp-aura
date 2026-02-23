@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import API from "../api/axiosInstance";
 import {
@@ -10,9 +10,6 @@ import {
   CreditCard,
   X,
   CheckCircle,
-  AlertCircle,
-  Hash,
-  ArrowUpRight,
   Clock,
 } from "lucide-react";
 
@@ -44,7 +41,7 @@ const Purchases = () => {
   const handlePayment = async (e) => {
     e.preventDefault();
     try {
-      const res = await API.post("/payments", {
+      await API.post("/payments", {
         invoiceId: selectedInvoice._id,
         amount: Number(paymentData.amount),
         method: paymentData.method,
@@ -167,23 +164,19 @@ const Purchases = () => {
               {filtered.map((inv) => (
                 <tr
                   key={inv._id}
-                  className="hover:bg-orange-50/30 transition-all group"
+                  onClick={() => navigate(`/invoices/${inv._id}`)}
+                  className="hover:bg-orange-50/50 transition-all group cursor-pointer"
                 >
                   <td className="p-6">
                     <div className="text-xs font-black text-slate-800 italic">
                       {new Date(inv.date).toLocaleDateString("fr-FR")}
                     </div>
-                    <Link
-                      to={`/invoices/${inv._id}`}
-                      className="text-[10px] font-bold text-orange-600 uppercase hover:underline"
-                    >
+                    <div className="text-[10px] font-bold text-orange-600 uppercase">
                       {inv.invoiceNumber}
-                    </Link>
-                  </td>
-                  <td className="p-6">
-                    <div className="text-sm font-black text-slate-700">
-                      {inv.partner?.name}
                     </div>
+                  </td>
+                  <td className="p-6 font-black text-slate-700 text-sm">
+                    {inv.partner?.name}
                   </td>
                   <td className="p-6 text-right font-bold text-slate-900">
                     {(inv.totalTTC || 0).toLocaleString()}{" "}
@@ -209,20 +202,24 @@ const Purchases = () => {
                     <div className="flex justify-center gap-3">
                       {inv.status !== "Payée" && (
                         <button
-                          onClick={() => setSelectedInvoice(inv)}
-                          className="p-3 bg-slate-900 text-white rounded-2xl hover:bg-orange-600 transition-all shadow-lg shadow-slate-200"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedInvoice(inv);
+                          }}
+                          className="p-3 bg-slate-900 text-white rounded-2xl hover:bg-orange-600 transition-all shadow-lg relative z-10"
                         >
                           <CreditCard size={16} />
                         </button>
                       )}
                       <button
-                        onClick={() =>
+                        onClick={(e) => {
+                          e.stopPropagation();
                           window.open(
                             `http://localhost:5000/api/invoices/pdf/${inv._id}`,
                             "_blank",
-                          )
-                        }
-                        className="p-3 bg-white border border-slate-100 text-slate-400 hover:text-slate-900 rounded-2xl transition-all shadow-sm"
+                          );
+                        }}
+                        className="p-3 bg-white border border-slate-100 text-slate-400 hover:text-slate-900 rounded-2xl transition-all shadow-sm relative z-10"
                       >
                         <Download size={16} />
                       </button>
@@ -234,7 +231,7 @@ const Purchases = () => {
           </table>
         </div>
 
-        {/* MODAL - RESTYLED */}
+        {/* MODAL */}
         {selectedInvoice && (
           <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-[3.5rem] p-12 w-full max-w-md shadow-2xl relative border border-white/20">
@@ -244,7 +241,6 @@ const Purchases = () => {
               >
                 <X size={28} />
               </button>
-
               <div className="mb-10 text-center">
                 <div className="w-20 h-20 bg-orange-100 text-orange-600 rounded-[2rem] flex items-center justify-center mx-auto mb-4">
                   <CreditCard size={32} />
@@ -256,7 +252,6 @@ const Purchases = () => {
                   {selectedInvoice.invoiceNumber}
                 </p>
               </div>
-
               <form onSubmit={handlePayment} className="space-y-6">
                 <div className="bg-slate-50 p-6 rounded-[2.5rem] text-center border border-slate-100">
                   <p className="text-[10px] font-black text-slate-400 uppercase mb-1">
@@ -270,7 +265,6 @@ const Purchases = () => {
                     DH
                   </p>
                 </div>
-
                 <div className="space-y-4">
                   <input
                     type="date"
@@ -295,7 +289,6 @@ const Purchases = () => {
                     placeholder="0.00"
                     required
                   />
-
                   <div className="grid grid-cols-2 gap-4">
                     <select
                       className="w-full p-4 bg-slate-50 rounded-2xl border-none font-black text-[10px] uppercase text-slate-700"
@@ -322,7 +315,6 @@ const Purchases = () => {
                     />
                   </div>
                 </div>
-
                 <button
                   type="submit"
                   className="w-full bg-orange-600 text-white p-6 rounded-[2.5rem] font-black uppercase text-xs hover:bg-slate-900 transition-all flex items-center justify-center gap-3 shadow-2xl shadow-orange-200"
